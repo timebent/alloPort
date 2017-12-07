@@ -8,5 +8,7 @@ This is work toward a composition using this system.
 Goals:
 
 Visual display across multiple screens
+
 Auditory display across multiple speakers
+
 Stereographic projection

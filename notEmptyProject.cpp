@@ -14,6 +14,8 @@ public:
     int appBufferSize = 128;
     int width = 1600;
     int height = 1200;
+    double durSliderValue;
+    double ampSliderValue;
     al_sec currentTime = 0;
     // ViewpointWindow* vw;
     GLVBinding gui;
@@ -21,6 +23,7 @@ public:
     glv::Slider durSlider;
     glv::Slider windowTimeSlider;
     glv::Slider delayTimeSlider;
+    glv::Slider ampSlider;
     glv::Button quantizeButton;
     glv::Button mirrorButton;
     glv::Button spinCycleButton;
@@ -49,7 +52,8 @@ public:
         gui.style().color.set(glv::Color(0.7), 0.5);
         layout.arrangement(">p");
         
-        durSlider.interval(1000, 10);
+
+        durSlider.interval(10000, 10);
         durSlider.setValue(500);
         layout << durSlider;
         layout << new glv::Label("duration");
@@ -63,6 +67,11 @@ public:
         delayTimeSlider.setValue(0.5);
         layout << delayTimeSlider;
         layout << new glv::Label("delayTime");
+        
+        ampSlider.interval(0.01, 0.1);
+        ampSlider.setValue(0.05);
+        layout << ampSlider;
+        layout << new glv::Label("ampSlider");
         
         layout << quantizeButton;
         layout << new glv::Label("quantize");
@@ -104,7 +113,8 @@ public:
     void onKeyDown(const ViewpointWindow& vw, const Keyboard& k) {
         if (k.key() == ' ') {
             std::cout << "Spacebar pressed" << std::endl;
-            for(int i = 0; i<48; i++) {
+          
+            for(int i = 0; i<200; i++) {
                 scheduleGrain(ofRandom(1000, 2000), ofRandom(200, 800), durSlider.getValue());
             }
         }
@@ -139,7 +149,8 @@ public:
     // Audio callback
     void onSound(AudioIOData& io){
         myClock.update(myClock.dt());
-        delayTime(delayTimeSlider.getValue());
+        durSliderValue = durSlider.getValue();
+        ampSliderValue = ampSlider.getValue();
         delayL.delay(delayTime());
         delayR.delay(delayTime());
         currentTime =  myClock() * 1000;
@@ -180,11 +191,16 @@ public:
                    // std::cout << s_to << std::endl;
                     
                     for (int j=s_from; j<s_to; j++) {
-                        
-                        g.lpf.freq((g.window(g.dur, g.windowPos) * 10000) + 1000);
-                        g.currentSample = g.lpf(g.osc());
-                        g.currentSample *= g.window(g.dur, g.windowPos) * g.amp;
-                        g.windowPos++;
+                      
+                        float envVal = g.env();
+                        // g.lpf.freq((g.window(g.dur, g.windowPos) * 10000) + 1000);
+                        g.lpf.freq(envVal * 1000 + 500);
+                        g.currentSample = g.lpf(g.osc()) * 0.1;
+                        // g.currentSample = g.osc() * 0.1;
+                        g.currentSample = envVal * g.currentSample;
+                        // g.currentSample *= g.window(g.dur, g.windowPos) * g.amp;
+                        // g.windowPos++;
+                       
                         float2 currentFrame = g.panner(g.currentSample);
                         io.frame(j+1);
                         io.sum(currentFrame[0], 0);
@@ -204,6 +220,8 @@ public:
         
         for( int i = 0; i<appBufferSize; i++ ) {
             io.frame(i + 1); // set to the beginning frame
+            delayTime(delayTimeSlider.getValue());
+
             
             float delayedL = delayL(); // read delayed sample from the delay line
             float delayedR = delayR();
@@ -215,8 +233,8 @@ public:
             delayR(delayedL + (srcR + srcL) );
             
             // io.sum(delayed + src, 0, 1);
-            io.out(0) = srcL + delayedL; // output src plus delayed
-            io.out(1) = srcR + delayedR;
+            io.out(0) = (srcL + delayedL) * ampSliderValue; // output src plus delayed
+            io.out(1) = (srcR + delayedR) * ampSliderValue;
             
         }
         
@@ -390,7 +408,7 @@ public:
             c.startTime(startTime);
             // c.color(RGB(0.1, 0.5, 0.1));
             
-            g.setAll(freq, 0.01, ofRandom(-1, 1), seqStrategy->getDurInSamples(), seqStrategy->getOnsetInSamples());
+            g.setAll(freq, 0.01, ofRandom(-1, 1), seqStrategy->getDurInSamples(), seqStrategy->getOnsetInSamples(), appSampleRate);
             // sets dur, remain, nextOnset, and start
             
             // gives you the index of the grain ... should you need it.
@@ -418,7 +436,7 @@ public:
             windowTime = windowTimeSlider.getValue();
             quantizeFreq = quantizeButton.getValue();
         
-            onset = map(x, 0, width, windowTime/10, windowTime); // onset in ms.
+            onset = map(x, 0, width, windowTime/1000, windowTime); // onset in ms.
         // onset = 0;
             accumOnset = 0;
         
@@ -428,7 +446,7 @@ public:
             freq = min(freq, (double) 1000);
             freq = max(freq, (double) 10);
         
-            dur = durSlider.getValue();
+            dur = durSliderValue;
             // dur = map(dur, sliderValue)
             // dur = 500;
             dur = min(dur, windowTime);

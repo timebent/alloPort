@@ -70,7 +70,8 @@ public:
         env.decay(dur * 0.5);			// Set longer (400 ms) decay
     }
     
-    Grain(double _freq, double _amp, double _pan, double _dur, int _nextOnset) {
+
+    Grain(double _freq, double _amp, double _pan, double _dur, int _nextOnset, int sampleRate) {
         freq = _freq;
         amp = _amp;
         pan = _pan;
@@ -84,11 +85,12 @@ public:
         lpf.res(4);				// Set resonance amount to emphasize filter
         lpf.freq(1000);
         osc.freq(_freq);
-        env.attack(dur * 0.5);		// Set short (10 ms) attack
-        env.decay((dur * 0.5));			// Set longer (400 ms) decay
+        env.attack((dur/(double) sampleRate) * 0.5);
+        env.decay(((dur/(double) sampleRate) * 0.5));
     }
     
-    void setAll(double _freq, double _amp, double _pan, double _dur, int _nextOnset) {
+    void setAll(double _freq, double _amp, double _pan, double _dur, int _nextOnset, int sampleRate) {
+
         freq = _freq;
         amp = _amp;
         pan = _pan;
@@ -98,11 +100,13 @@ public:
         nextOnset = _nextOnset; // in samples
         start = _nextOnset;
         lpf.type(LOW_PASS);		// Set filter to low-pass response
-        lpf.res(4);				// Set resonance amount to emphasize filter
+        lpf.res(16);				// Set resonance amount to emphasize filter
         lpf.freq(1000);
         osc.freq(_freq);
-        env.attack(dur * 0.5);		// Set short (10 ms) attack
-        env.decay(dur * 0.5);			// Set longer (400 ms) decay
+        env.reset();
+        env.attack((dur/(double) sampleRate) * 0.5);		// Set short (10 ms) attack
+        env.decay((dur/(double) sampleRate) * 0.5);			// Set longer (400 ms) decay
+
         panner.pos(pan);
     }
     
@@ -112,7 +116,5 @@ public:
     }
     
 };
-
-
 
 #endif /* audioTools_h */

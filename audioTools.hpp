@@ -70,6 +70,7 @@ public:
         env.decay(dur * 0.5);			// Set longer (400 ms) decay
     }
     
+
     Grain(double _freq, double _amp, double _pan, double _dur, int _nextOnset, int sampleRate) {
         freq = _freq;
         amp = _amp;
@@ -89,6 +90,7 @@ public:
     }
     
     void setAll(double _freq, double _amp, double _pan, double _dur, int _nextOnset, int sampleRate) {
+
         freq = _freq;
         amp = _amp;
         pan = _pan;
@@ -104,6 +106,7 @@ public:
         env.reset();
         env.attack((dur/(double) sampleRate) * 0.5);		// Set short (10 ms) attack
         env.decay((dur/(double) sampleRate) * 0.5);			// Set longer (400 ms) decay
+
         panner.pos(pan);
     }
     
@@ -113,7 +116,5 @@ public:
     }
     
 };
-
-
 
 #endif /* audioTools_h */

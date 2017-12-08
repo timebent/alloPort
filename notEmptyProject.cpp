@@ -52,6 +52,7 @@ public:
         gui.style().color.set(glv::Color(0.7), 0.5);
         layout.arrangement(">p");
         
+
         durSlider.interval(10000, 10);
         durSlider.setValue(500);
         layout << durSlider;
@@ -112,6 +113,7 @@ public:
     void onKeyDown(const ViewpointWindow& vw, const Keyboard& k) {
         if (k.key() == ' ') {
             std::cout << "Spacebar pressed" << std::endl;
+          
             for(int i = 0; i<200; i++) {
                 scheduleGrain(ofRandom(1000, 2000), ofRandom(200, 800), durSlider.getValue());
             }
@@ -189,6 +191,7 @@ public:
                    // std::cout << s_to << std::endl;
                     
                     for (int j=s_from; j<s_to; j++) {
+                      
                         float envVal = g.env();
                         // g.lpf.freq((g.window(g.dur, g.windowPos) * 10000) + 1000);
                         g.lpf.freq(envVal * 1000 + 500);
@@ -218,6 +221,7 @@ public:
         for( int i = 0; i<appBufferSize; i++ ) {
             io.frame(i + 1); // set to the beginning frame
             delayTime(delayTimeSlider.getValue());
+
             
             float delayedL = delayL(); // read delayed sample from the delay line
             float delayedR = delayR();
@@ -245,7 +249,6 @@ public:
         } else {
             projectionMode = 1;
         }
-        
     }
     
     void onDraw(Graphics& g, const Viewpoint& v){

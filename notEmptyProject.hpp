@@ -2,7 +2,6 @@
 #include "audioTools.hpp"
 #include "visualTools.hpp"
 #include <array>
-#include "allocore/system/al_Time.hpp"
 #include "allocore/math/al_Functions.hpp"
 #include "allocore/io/al_App.hpp"
 #include "GLV/glv.h"
@@ -11,6 +10,7 @@
 
 
 using namespace gam;
+using namespace al;
 
 struct SequenceStrategy {
     
@@ -47,29 +47,16 @@ struct SequenceStrategy {
     }
 };
 
-static unsigned const NUMGRAINS = 2048;
-SequenceStrategy* seqStrategy;
-std::array<Grain, NUMGRAINS> grains;
-Delay<> delayL;
-Delay<> delayR;
-OnePole<> delayTime;
-Cylinder myCylinder;
-std::array<Cylinder, NUMGRAINS> myCylinders;
+// global clock ... not sure why it has to be global
+Clock myClock(true);
 
-bool projectionMode;
-bool quantizeFreq;
-double windowTime;
-
+// function prototypes
 int scheduleGrain(double onset, double freq, double dur);
 int mouseDrawAndSchedule(int x, int y);
 void setWindowTime(int &time);
 
-//LFO<> lfo;
-//AD<> env;
 
-// Texture texBlur;
-al::Clock myClock(true);
-
+// Some functions ... should consider replacing this with something already in allocore
 double roundToHundredths(double x){
     x /=100;
     return floor(x + 0.5) * 100;

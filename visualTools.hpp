@@ -10,53 +10,29 @@
 #define visualTools_hpp
 
 #include <stdio.h>
-#include "allocore/io/al_App.hpp"
-#include "allocore/system/al_Time.hpp"
+#include <math.h>
+// #include "allocore/io/al_App.hpp"
+// #include "allocore/system/al_Time.hpp"
 
-using namespace al;
-
-class Sphere : public Mesh {
-public:
-    
-    Sphere() {
-        addSphere(m);
-        m.primitive(Graphics::TRIANGLES);
-    }
-    
-//   void translate(float x, float y, float z) {
-//        m.translate(x, y, z);
-//    }
-    
-    void draw(Graphics& g) {
-        g.draw(m);
-    }
-    
-//    void ribbonize(float width=0.04, bool faceBinormal=false) {
-//        m.ribbonize(0.04, false);
-//    }
-//    
-//    
-//    void scale(float x, float y, float z) {
-//        m.scale(x, y, z);
-//    }
-    Mesh m;
-};
+// using namespace al;
 
 
 class Cylinder {
 public:
     
     Cylinder() {
-        addCylinder(m);
-        m.primitive(Graphics::QUAD_STRIP);
+        
+        // m.primitive(Graphics::QUAD_STRIP);
        // m.rotate(90, 1, 0, 0);
        // m.color(RGB(0.1, 0.5, 0.1));
         currentX = 0;
     }
     
-    void translate(float x, float y, float z) {
-        m.translate(x, y, z);
+    /* void setMesh(Mesh& mesh) {
+        m = mesh;
+        addCylinder(m);
     }
+     */
     
     double startTime() {
         return mStartTime;
@@ -82,20 +58,19 @@ public:
          mDuration = duration;
     }
     
-    void color(RGB rgb) {
-        // m.color(rgb);
-    }
-    
-    void scale(float x, float y, float z) {
-        m.scale(x, y, z);
-    }
-    
-    void draw(Graphics& g) {
+    /* 
+     void draw(Graphics& g) {
         g.draw(m);
     }
+    */
     
-    double rotate() {
+    double rotateY() {
         mRotate = fmod(mRotate + 1, 360);
+        return mRotate;
+    }
+    
+    double rotateX() {
+        mRotate = fmod(mRotate + (3.1428/3), 360);
         return mRotate;
     }
     
@@ -108,12 +83,12 @@ public:
 //    }
 
 
-    Mesh getMesh() {return m;};
+    // Mesh getMesh() {return m;};
    
     float currentX=0, currentY=0, currentZ=0;
     
 private:
-     Mesh m;
+     // Mesh m;
     double mStartTime=0, mOnset=0, mDuration;
     double mRotate=0;
     

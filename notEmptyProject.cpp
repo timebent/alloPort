@@ -1,5 +1,6 @@
 #include "allocore/io/al_App.hpp"
 #include "notEmptyProject.hpp"
+#include "allocore/system/al_Time.hpp"
 
 using namespace al;
 using namespace gam;
@@ -9,17 +10,37 @@ using namespace gam;
 class MyApp : public App{
 public:
     
+    // application aspects
+    // should be defines for these elements ... I think it is in the stereo panning example
     int appSampleRate = 48000;
     int appChannels = 2;
     int appBufferSize = 128;
+    
     int width = 1600;
     int height = 1200;
-    double durSliderValue;
-    double ampSliderValue;
-    al_sec currentTime = 0;
-    // ViewpointWindow* vw;
-    GLVBinding gui;
     
+    // audio elements
+    static unsigned const NUMGRAINS = 192;
+    std::array<Grain, NUMGRAINS> grains;
+    Delay<> delayL;
+    Delay<> delayR;
+    OnePole<> delayTime;
+    bool quantizeFreq;
+    
+    // visual elements
+   
+    Light light;
+    std::array<Cylinder, NUMGRAINS> myCylinders;
+    bool projectionMode;
+    Mesh mesh;
+    
+    // timing elements
+    double windowTime;
+    SequenceStrategy* seqStrategy;
+    al_sec currentTime = 0;
+    
+    // GUI elements of the app.
+    GLVBinding gui;
     glv::Slider durSlider;
     glv::Slider windowTimeSlider;
     glv::Slider delayTimeSlider;
@@ -30,79 +51,88 @@ public:
     glv::Button threeDButton;
     glv::Table layout;
     
-    // double rotate = 0;
-    
+    double durSliderValue;
+    double ampSliderValue;
+
+    // Constructor
     MyApp() {
         
+        // set visual elements
         projectionMode = false;
-        quantizeFreq = 0;
-
-        windowTime = 10000;
-        seqStrategy = new SequenceStrategy(100, 100, appSampleRate);
-        
         nav().pos(0,0,4);
         navControl().useMouse(false);
+        int numVertices = addIcosahedron(mesh);
         
+        for(int i=0; i<numVertices; i++) {
+            float f = (float)i/numVertices;
+            mesh.color(HSV(f*0.1+0.2,1,1));
+        }
+        
+        mesh.decompress();
+        mesh.generateNormals();
+        
+        // set GUI elements
         ViewpointWindow* vw;
         vw = initWindow(Window::Dim(width, height));
         vw->title("donkeyKong");
         vw->fullScreen(true);
-        
         gui.bindTo(window());
         gui.style().color.set(glv::Color(0.7), 0.5);
         layout.arrangement(">p");
-        
-
+        // ---------------------
         durSlider.interval(10000, 10);
         durSlider.setValue(500);
         layout << durSlider;
         layout << new glv::Label("duration");
-        
+        // ---------------------
         windowTimeSlider.interval(50000, 10000);
         windowTimeSlider.setValue(10000);
         layout << windowTimeSlider;
         layout << new glv::Label("windowTime");
-        
+        // ---------------------
         delayTimeSlider.interval(0.01, 0.75);
         delayTimeSlider.setValue(0.5);
         layout << delayTimeSlider;
         layout << new glv::Label("delayTime");
-        
+        // ---------------------
         ampSlider.interval(0.01, 0.1);
         ampSlider.setValue(0.05);
         layout << ampSlider;
         layout << new glv::Label("ampSlider");
-        
+        // ---------------------
         layout << quantizeButton;
         layout << new glv::Label("quantize");
-        
+        // ---------------------
         layout << mirrorButton;
         layout << new glv::Label("mirror");
-        
+        // ---------------------
         layout << spinCycleButton;
         layout << new glv::Label("spinCycle");
-        
+        // ---------------------
         layout << threeDButton;
         layout << new glv::Label("3D");
-        
-
+        // ---------------------
         layout.arrange();
         gui << layout;
-
+        // ---------------------
+    
+        // set timing elements
+       
+        windowTime = 10000;
+        seqStrategy = new SequenceStrategy(100, 100, appSampleRate);
+     
+        // create and set the pool of grains and associated shapes
         for(int i=0; i<NUMGRAINS; i++){
           Grain& g = grains[i];
           g.remain = 0;
-          
           Cylinder& c = myCylinders[i];
-          c.scale(1, 1, 1);
-          c.translate(0.0, 0.0, 0.0);
-          // c.color(RGB(1.0, 0.0, 0.0));
         }
         
+        // set audio elements
+        quantizeFreq = 0;
         delayTime.lag(0.1);
         delayL.maxDelay(1.0);
         delayL.delay(0.25);
-        
         delayR.maxDelay(1.0);
         delayR.delay(0.25);
         
@@ -114,7 +144,7 @@ public:
         if (k.key() == ' ') {
             std::cout << "Spacebar pressed" << std::endl;
           
-            for(int i = 0; i<200; i++) {
+            for(int i = 0; i<128; i++) {
                 scheduleGrain(ofRandom(1000, 2000), ofRandom(200, 800), durSlider.getValue());
             }
         }
@@ -124,8 +154,6 @@ public:
         int grainIndex = mouseDrawAndSchedule(m.x(), m.y(), vw);
         myCylinders[grainIndex].currentX = map(m.x(), 0, vw.dimensions().w, vw.aspect() * 1, vw.aspect());
         myCylinders[grainIndex].currentY = map(m.y(), 0, vw.dimensions().h, 1, -1);
-       // myCylinders[grainIndex].scale(0.1,0.1, 0.1);
-      //  myCylinders[grainIndex].scale(ofRandom(0.1, 0.2), ofRandom(0.1, 0.2), ofRandom(0.1, 0.2));
     }
     
     void onMouseUp(const ViewpointWindow& vw, const Mouse& m) {
@@ -134,12 +162,8 @@ public:
     
     void onMouseDrag(const ViewpointWindow& vw, const Mouse& m) {
         int grainIndex = mouseDrawAndSchedule(m.x(), m.y(), vw);
-        // std::cout << "hello Mouse Down" << std::endl;
         myCylinders[grainIndex].currentX = map(m.x(), 0, vw.dimensions().w, vw.aspect() * 1, vw.aspect());
         myCylinders[grainIndex].currentY = map(m.y(), 0, vw.dimensions().h, 1, -1);
-        // myCylinders[grainIndex].scale(0.1,0.1, 0.1);
-       // myCylinders[grainIndex].scale(ofRandom(0.1, 0.2), ofRandom(0.1, 0.2), ofRandom(0.1, 0.2));
-        // std::cout << map(m.y(), 0, vw->dimensions().h, 1, -1) << std::endl;
     }
     
     void onMouseMove(const Mouse& m) {
@@ -256,6 +280,8 @@ public:
         float aspect = v.viewport().aspect();
         g.nicest();
         
+        light();
+        
         if(projectionMode) {
             g.pushMatrix(Graphics::PROJECTION);
             g.loadMatrix(Matrix4f::ortho2D(-aspect, aspect, -1, 1)); // using the aspect ratio as the x
@@ -272,27 +298,34 @@ public:
                 double newPos = map(currentTime, c.startTime(), c.startTime() + c.onset(), aspect * -1,  0);
                 c.currentX = newPos;
                 
+                float rotationX = c.rotateX();
+                float rotationY = c.rotateY();
+                
                 if(projectionMode) {
                     
                     g.pushMatrix(Graphics::MODELVIEW);
                         g.loadIdentity();
                     
                     if(spinCycleButton.getValue()) {
-                        g.rotate(c.rotate() + 100, 0, 1, 0);
-                        g.translate(c.currentX, c.currentY, 0);
-                    } else {
-                        g.translate(c.currentX, c.currentY, 0);
-                        g.rotate(c.rotate(), 0, 1, 0);
+                        g.rotate(rotationY + 100, 0, 1, 0);
+                        // g.translate(c.currentX, c.currentY, 0);
+                        // g.rotate(rotationY, 0, 1, 0);
+                        // g.rotate(rotationX, 1,0,0);
                     }
+                    
+                        g.translate(c.currentX, c.currentY, 0);
+                        g.rotate(rotationY, 0, 1, 0);
+                        g.rotate(rotationX, 1,0,0);
+                    
                         if(c.onset() + c.startTime() < currentTime) {
-                                g.color(1.0, 1.0, 1.0, 1.0);
+                                // g.color(1.0, 1.0, 1.0, 1.0);
                                 g.scale(0.05, 0.05, 0.05);
                         } else {
-                        g.color(0.1, 0.1, 0.9, 1.0);
+                        // g.color(0.1, 0.1, 0.9, 1.0);
                         g.scale(0.01, 0.01, 0.01);
                         }
 
-                        c.draw(g);
+                    g.draw(mesh);
 
                     g.popMatrix();
                     
@@ -301,21 +334,23 @@ public:
                         g.loadIdentity();
                         
                         if(spinCycleButton.getValue()) {
-                            g.rotate(c.rotate() + 100, 0, 1, 0);
-                            g.translate(c.currentX * -1, c.currentY, 0);
-                        } else {
-                            g.translate(c.currentX * -1, c.currentY, 0);
-                            g.rotate(c.rotate(), 0, 1, 0);
+                            g.rotate(rotationY + 100, 0, 1, 0);
+                            // g.translate(c.currentX * -1, c.currentY, 0);
+                           // g.rotate(rotationY, 0, 1, 0);
+                            // g.rotate(rotationX, 1,0,0);
                         }
+                            g.translate(c.currentX * -1, c.currentY, 0);
+                            g.rotate(rotationY, 0, 1, 0);
+                            g.rotate(rotationX, 1,0,0);
                         
                         if(c.onset() + c.startTime() < currentTime) {
-                            g.color(1.0, 1.0, 1.0, 1.0);
+                            // g.color(1.0, 1.0, 1.0, 1.0);
                             g.scale(0.05, 0.05, 0.05);
                         } else {
-                            g.color(0.1, 0.1, 0.9, 1.0);
+                            // g.color(0.1, 0.1, 0.9, 1.0);
                             g.scale(0.01, 0.01, 0.01);
                         }
-                        c.draw(g);
+                        g.draw(mesh);
                  
                     g.popMatrix();
                     }
@@ -325,11 +360,14 @@ public:
                     g.pushMatrix();
                     
                     if(spinCycleButton.getValue()) {
-                        g.rotate(c.rotate() + 100, 0, 1, 0);
+                        g.rotate(rotationY + 100, 0, 1, 0);
                         g.translate(c.currentX, c.currentY, 0);
+                        g.rotate(rotationY, 0, 1, 0);
+                        g.rotate(rotationX, 1,0,0);
                     } else {
                         g.translate(c.currentX, c.currentY, 0);
-                        g.rotate(c.rotate(), 0, 1, 0);
+                        g.rotate(rotationY, 0, 1, 0);
+                        g.rotate(rotationX, 1,0,0);
                     };
                     
                         if(c.onset() + c.startTime() < currentTime) {
@@ -340,7 +378,7 @@ public:
                             g.scale(0.01, 0.01, 0.01);
                         }
                     
-                        c.draw(g);
+                    g.draw(mesh);
                 
                     g.popMatrix();
                     
@@ -348,11 +386,14 @@ public:
                     g.pushMatrix();
                         
                         if(spinCycleButton.getValue()) {
-                            g.rotate(c.rotate() + 100, 0, 1, 0);
+                            g.rotate(rotationY + 100, 0, 1, 0);
                             g.translate(c.currentX * -1, c.currentY, 0);
+                            g.rotate(rotationY, 0, 1, 0);
+                            g.rotate(rotationX, 1,0,0);
                         } else {
                             g.translate(c.currentX * -1, c.currentY, 0);
-                            g.rotate(c.rotate(), 0, 1, 0);
+                            g.rotate(rotationY, 0, 1, 0);
+                            g.rotate(rotationX, 1,0,0);
                         }
                         
                         if(c.onset() + c.startTime() < currentTime) {
@@ -363,7 +404,7 @@ public:
                             g.scale(0.01, 0.01, 0.01);
                         }
                         
-                        c.draw(g);
+                        g.draw(mesh);
               
                     g.popMatrix();
                     }

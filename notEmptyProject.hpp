@@ -2,15 +2,14 @@
 #include "audioTools.hpp"
 #include "visualTools.hpp"
 #include <array>
-#include "allocore/system/al_Time.hpp"
-#include "allocore/math/al_Functions.hpp"
 #include "allocore/io/al_App.hpp"
 #include "GLV/glv.h"
 #include "alloGLV/al_ControlGLV.hpp"
+#include "allocore/ui/al_Parameter.hpp"
 
 
-
-using namespace gam;
+// using namespace gam;
+using namespace al;
 
 struct SequenceStrategy {
     
@@ -19,6 +18,7 @@ struct SequenceStrategy {
     int sampleRate;
     int currentOnset;
     bool go;
+    rnd::Random<> randomNum;
     
     SequenceStrategy(double _nextOnset, double _nextDur, int _sampleRate) {
         nextOnset = _nextOnset;
@@ -35,11 +35,11 @@ struct SequenceStrategy {
     }
     
     void randomOnset(double lo, double hi) {
-        nextOnset = ofRandom(lo, hi + 1);
+        nextOnset = randomNum.uniform(lo, hi + 1);
     }
     
     void randomDur(double lo, double hi) {
-        nextDur =  ofRandom(lo, hi + 1);
+        nextDur =  randomNum.uniform(lo, hi + 1);
     }
     
     void onsetDecrement() {
@@ -47,43 +47,20 @@ struct SequenceStrategy {
     }
 };
 
-static unsigned const NUMGRAINS = 2048;
-SequenceStrategy* seqStrategy;
-std::array<Grain, NUMGRAINS> grains;
-Delay<> delayL;
-Delay<> delayR;
-OnePole<> delayTime;
-Cylinder myCylinder;
-std::array<Cylinder, NUMGRAINS> myCylinders;
+// global clock ... not sure why it has to be global
+Clock myClock(true);
+Parameter durSliderParam("dur", "", 1);
+Parameter ampSliderParam("amp", "", 0.01);
+Parameter delayTimeSliderParam("delaytime", "", 0.1);
+Parameter feedbackSliderParam("feedback", "", 0.6);
 
-bool projectionMode;
-bool quantizeFreq;
-double windowTime;
-
+// function prototypes
 int scheduleGrain(double onset, double freq, double dur);
 int mouseDrawAndSchedule(int x, int y);
 void setWindowTime(int &time);
 
-//LFO<> lfo;
-//AD<> env;
 
-// Texture texBlur;
-al::Clock myClock(true);
 
-double roundToHundredths(double x){
-    x /=100;
-    return floor(x + 0.5) * 100;
-}
-
-float roundToTenths(float x){
-    x /=10;
-    return floor(x + 0.5) * 10;
-}
-
-float map(float s, float a1, float a2, float b1, float b2)
-{
-    return b1 + (s-a1)*(b2-b1)/(a2-a1);
-}
 
 
 

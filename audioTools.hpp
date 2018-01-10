@@ -14,19 +14,9 @@
 #include "Gamma/Envelope.h"
 #include "Gamma/Delay.h"
 #include "Gamma/Effects.h"
-#include <math.h>
+#include "allocore/math/al_Random.hpp"
 #include <array>
 #include <stdio.h>
-
-using namespace gam;
-
-double ofRandom(double x, double y);
-
-struct hannWinFunctor {
-    inline double operator()(long windowLength, long windowPos) {
-        return 0.5 * (1.0 - cos((6.28318530717958647692 * windowPos) / (windowLength - 1)));
-    }
-};
 
 class Grain {
     
@@ -45,13 +35,13 @@ public:
     double resonance;
     double currentVolume;
     
-    Saw<> osc;
-    Biquad<> lpf;
-    LFO<> lfo;
-    AD<> env;
+    gam::Saw<> osc;
+    gam::Biquad<> lpf;
+    gam:: LFO<> lfo;
+    gam:: AD<> env;
     // OnePole<> cutOffSmoother;
-    hannWinFunctor window;
-    Pan<> panner;
+    // hannWinFunctor window;
+    gam::Pan<> panner;
     
     Grain() {
         freq = 440;
@@ -62,7 +52,7 @@ public:
         remain = 0;
         nextOnset = 48000;
         start = nextOnset;
-        lpf.type(LOW_PASS);		// Set filter to low-pass response
+        lpf.type(gam::LOW_PASS);		// Set filter to low-pass response
         lpf.res(4);				// Set resonance amount to emphasize filter
         lpf.freq(1000);
         osc.freq(440);
@@ -81,7 +71,7 @@ public:
         remain = (_dur);
         nextOnset = _nextOnset;
         start = _nextOnset;
-        lpf.type(LOW_PASS);		// Set filter to low-pass response
+        lpf.type(gam::LOW_PASS);		// Set filter to low-pass response
         lpf.res(4);				// Set resonance amount to emphasize filter
         lpf.freq(1000);
         osc.freq(_freq);
@@ -99,7 +89,7 @@ public:
         remain = (_dur); // in samples
         nextOnset = _nextOnset; // in samples
         start = _nextOnset;
-        lpf.type(LOW_PASS);		// Set filter to low-pass response
+        lpf.type(gam::LOW_PASS);		// Set filter to low-pass response
         lpf.res(16);				// Set resonance amount to emphasize filter
         lpf.freq(1000);
         osc.freq(_freq);
